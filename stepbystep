@@ -1,0 +1,64 @@
+npm install multer express(if havent done it)
+
+create the app.js (server, routes, path, middleware, etc). Import here multer and everything needed
+
+create the front end and in the form tag add this attribute
+    enctype="multipart/form-data"
+
+in app.js create storage engine
+    const storage = multer.diskStorage({
+        destination: './public/uploads/',
+        filename: function(req, file, cb) {
+            cb(null, file.fieldname + '-' + Date.now() + path.extname(file.originalname));
+        }
+    })
+the cb function defines the name to save the uploaded file. takes the field name in the form and adds a timestamp and at the end adds the extension.
+Then initialize the upload
+    const upload = multer({
+        storage: storage,
+        limits: {
+            fileSize: 1000000,
+            fileFilter: funtion(req, file, cb) {
+                checkFileType(file, cb);
+            }
+        }
+    }).single('myImage');
+In this case it will upload a single file, but there is an option to upload an array. And the parameter passed to single is the field name in the form in the frotn end.
+To limit to only certain file types, create the function checkFileType
+    function checkFileType(file, cb) {
+        // Allowed extensions
+        const filetypes = /jpeg|jpg|png|gif/;
+        //Check the extensions
+        const extName = filetypes.test(path.extname(file.originalname).toLowerCase());
+        //Check mime
+        const mimeType = filetypes.test(file.mimetype); //in case the extension of the file has been modified
+
+        if(mimeType && extName) {
+            return cb(null, true);
+        } else {
+            cb('Error: Images only!');
+        }
+    }
+
+Then in the route call the upload method previously defined:
+    app.post('/upload', (req, res) => {
+        upload(req, res, (err) => {
+            if (err) {
+                res.render('index', {
+                    msg: err
+                });
+            } else{
+                if(req.file == undefined) {
+                    res.render('index', {
+                        msg: 'Error: no file selected'
+                    })
+                } else{
+                    console.log(req.file);
+                    res.render('index', {
+                        msg: 'File uploaded',
+                        file: `uploads/${req.file.filename}`
+                    })
+                }
+            }
+        });
+    });
